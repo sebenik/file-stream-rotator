@@ -584,7 +584,9 @@ FileStreamRotator.getStream = function (options) {
                     rotateStream.end();
                 }
                 rotateStream = fs.createWriteStream(file, file_options);
-                stream.emit('new',file);
+                process.nextTick(function(){
+                    stream.emit('new',file);
+                })
                 BubbleEvents(rotateStream,stream);
             }
         });
@@ -624,8 +626,10 @@ FileStreamRotator.getStream = function (options) {
                 mkDirForFile(logfile);
 
                 rotateStream = fs.createWriteStream(newLogfile, file_options);
-                stream.emit('new',newLogfile);
-                stream.emit('rotate',oldFile, newLogfile);
+                process.nextTick(function(){
+                    stream.emit('new',newLogfile);
+                    stream.emit('rotate',oldFile, newLogfile);
+                })
                 BubbleEvents(rotateStream,stream);
             }
             rotateStream.write(str, encoding);

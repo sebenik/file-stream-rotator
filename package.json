@@ -1,5 +1,5 @@
 {
-    "name": "file-stream-rotator",
+    "name": "@zigasebenik/file-stream-rotator",
     "version": "0.6.2",
     "description": "Automated stream rotation useful for log files",
     "main": "FileStreamRotator.js",

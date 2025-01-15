@@ -333,18 +333,16 @@ function createLogWatcher(logfile, verbose, cb){
     if(!logfile) return null
     // console.log("Creating log watcher")
     try {
-        let stats = fs.lstatSync(logfile)
+        fs.statSync(logfile)
         return fs.watch(logfile, function(event,filename){
             // console.log(Date(), event, filename)
-            if(event == "rename"){
-                try {
-                    let stats = fs.lstatSync(logfile)
-                    // console.log("STATS:", stats)
-                }catch(err){
-                    // console.log("ERROR:", err)
-                    cb(err,logfile)
-                }                    
-            }
+            try {
+                fs.statSync(logfile)
+                // console.log("STATS:", stats)
+            } catch (err) {
+                // console.log("ERROR:", err)
+                cb(err, logfile)
+            }                    
         })
     }catch(err){
         if(verbose){
@@ -570,8 +568,11 @@ FileStreamRotator.getStream = function (options) {
                 return
             }
             // console.log("ADDING WATCHER", newLog)
-            logWatcher = createLogWatcher(newLog, self.verbose, function(err,newLog){
-                stream.emit('createLog', newLog)
+
+            process.nextTick(function(){
+                logWatcher = createLogWatcher(newLog, self.verbose, function (err, newLog) {
+                    stream.emit('createLog', newLog)
+                })        
             })        
         })
 
@@ -634,7 +635,6 @@ FileStreamRotator.getStream = function (options) {
         process.nextTick(function(){
             stream.emit('new',logfile);
         })
-        stream.emit('new',logfile)
         return stream;
     } else {
         if (self.verbose) {

@@ -331,20 +331,20 @@ function createCurrentSymLink(logfile, name, verbose) {
  */
 function createLogWatcher(logfile, verbose, cb){
     if(!logfile) return null
-    // console.log("Creating log watcher")
     try {
-        fs.statSync(logfile)
+        let c_stats = fs.lstatSync(logfile);
         return fs.watch(logfile, function(event,filename){
-            // console.log(Date(), event, filename)
+            // console.log(Date(), event, filename, c_stats.ino)
             try {
-                fs.statSync(logfile)
-                // console.log("STATS:", stats)
+                let stats = fs.lstatSync(logfile)
+                if (c_stats.ino !== stats.ino) {
+                    cb(null, logfile, true);
+                }
             } catch (err) {
-                // console.log("ERROR:", err)
                 cb(err, logfile)
             }                    
         })
-    }catch(err){
+    } catch(err) {
         if(verbose){
             console.log(new Date(),"[FileStreamRotator] Could not add watcher for " + logfile);
         }
@@ -549,7 +549,6 @@ FileStreamRotator.getStream = function (options) {
         })
 
         stream.on("new",function(newLog){
-            // console.log("new log", newLog)
             stream.auditLog = self.addLogToAudit(newLog,stream.auditLog, stream, self.verbose)
             if(options.create_symlink){
                 createCurrentSymLink(newLog, options.symlink_name, self.verbose)
@@ -567,18 +566,18 @@ FileStreamRotator.getStream = function (options) {
             if(!options.watch_log){
                 return
             }
-            // console.log("ADDING WATCHER", newLog)
 
             process.nextTick(function(){
-                logWatcher = createLogWatcher(newLog, self.verbose, function (err, newLog) {
-                    stream.emit('createLog', newLog)
+                logWatcher = createLogWatcher(newLog, self.verbose, function (err, newLog, inoChanged = false) {
+                    stream.emit('createLog', newLog, inoChanged)
                 })        
             })        
         })
 
-        stream.on("createLog",function(file){
+        stream.on("createLog",function(file, a){
             try {
-                let stats = fs.lstatSync(file)
+                if (inoChanged) throw new Error();
+                fs.lstatSync(file)
             }catch(err){
                 if(rotateStream && rotateStream.end == "function"){
                     rotateStream.end();
@@ -626,7 +625,7 @@ FileStreamRotator.getStream = function (options) {
                 mkDirForFile(logfile);
 
                 rotateStream = fs.createWriteStream(newLogfile, file_options);
-                process.nextTick(function(){
+                setTimeout(() => {
                     stream.emit('new',newLogfile);
                     stream.emit('rotate',oldFile, newLogfile);
                 })

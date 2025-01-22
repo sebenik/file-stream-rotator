@@ -116,7 +116,6 @@ var _checkDailyAndTest = function (freqType) {
         case 'custom':
         case 'daily':
             return {type: freqType, digit: undefined};
-            break;
         case 'test':
             return {type: freqType, digit: 0};
     }
@@ -180,11 +179,9 @@ FileStreamRotator.getDate = function (format, date_format, utc) {
             case 'm':
                 var minute = Math.floor(currentMoment.minutes() / format.digit) * format.digit;
                 return currentMoment.minutes(minute).format(date_format);
-                break;
             case 'h':
                 var hour = Math.floor(currentMoment.hour() / format.digit) * format.digit;
                 return currentMoment.hour(hour).format(date_format);
-                break;
             case 'daily':
             case 'custom':
             case 'test':
@@ -334,7 +331,6 @@ function createLogWatcher(logfile, verbose, cb){
     try {
         let c_stats = fs.lstatSync(logfile);
         return fs.watch(logfile, function(event,filename){
-            // console.log(Date(), event, filename, c_stats.ino)
             try {
                 let stats = fs.lstatSync(logfile)
                 if (c_stats.ino !== stats.ino) {
@@ -530,7 +526,12 @@ FileStreamRotator.getStream = function (options) {
     mkDirForFile(logfile);
 
     var file_options = options.file_options || {flags: 'a'};
-    var rotateStream = fs.createWriteStream(logfile, file_options);
+    var rotateStream = fs.createWriteStream(logfile, file_options)
+        .on('error', (err) => {
+            if (self.verbose) {
+                console.log(err);
+            }
+        })
     if ((curDate && frequencyMetaData && (staticFrequency.indexOf(frequencyMetaData.type) > -1)) || fileSize > 0) {
         if (self.verbose) {
             console.log(new Date(),"[FileStreamRotator] Rotating file: ", frequencyMetaData?frequencyMetaData.type:"", fileSize?"size: " + fileSize:"");
@@ -582,7 +583,12 @@ FileStreamRotator.getStream = function (options) {
                 if(rotateStream && rotateStream.end == "function"){
                     rotateStream.end();
                 }
-                rotateStream = fs.createWriteStream(file, file_options);
+                rotateStream = fs.createWriteStream(file, file_options)
+                    .on('error', (err) => {
+                        if (self.verbose) {
+                            console.log(err);
+                        };
+                    })
                 process.nextTick(function(){
                     stream.emit('new',file);
                 })
@@ -624,7 +630,12 @@ FileStreamRotator.getStream = function (options) {
 
                 mkDirForFile(logfile);
 
-                rotateStream = fs.createWriteStream(newLogfile, file_options);
+                rotateStream = fs.createWriteStream(newLogfile, file_options)
+                    .on('error', (err) => {
+                        if (self.verbose) {
+                            console.log(err);
+                        }
+                    })
                 setTimeout(() => {
                     stream.emit('new',newLogfile);
                     stream.emit('rotate',oldFile, newLogfile);
